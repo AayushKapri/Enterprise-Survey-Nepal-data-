@@ -28,7 +28,7 @@ data1 <- read_dta("C:\\Users\\Aayush\\Documents\\Nepal_2009_2013.dta")
 data2 <- data1 %>%
   # Select only manufacturing firms
   filter(a0 == 1) %>%
-  #Select rows valid for balanced panel
+  #Select only rows valid for balanced panel
   group_by(id2009) %>%
   filter(all(c(2009, 2013) %in% year)) %>%
   ungroup()
