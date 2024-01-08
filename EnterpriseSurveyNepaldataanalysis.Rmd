@@ -92,7 +92,11 @@ data4 <- data3%>%
 ```
 
 
+<<<<<<< HEAD
 ```{r, warning=FALSE}
+=======
+```{r}
+>>>>>>> 4f18ff6ae2ea21b35f840a9c05bedeed1f32523a
 # Panel regression
 # Create a panel data object
 panel_data <- pdata.frame(data4, index = c("ID", "year"))
@@ -114,7 +118,11 @@ fixed_models <- list(
   fixed_model5, fixed_model6, fixed_model7, fixed_model8
 )
 
+<<<<<<< HEAD
 # Generate table for panel regression
+=======
+# Generate stargazer table for panel regression
+>>>>>>> 4f18ff6ae2ea21b35f840a9c05bedeed1f32523a
 huxreg(fixed_models) %>%
   set_caption("Panel Regression Models") %>%
   set_number_format(2) %>%
