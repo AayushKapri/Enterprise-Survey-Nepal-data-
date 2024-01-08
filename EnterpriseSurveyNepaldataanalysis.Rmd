@@ -14,13 +14,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r, warning=FALSE}
 library(pacman)
-p_load(haven, tidyverse, prodest, estprod, plm)
+p_load(haven, tidyverse, prodest, estprod, plm, huxtable)
 ```
 
 
 ```{r}
 #load 2009-2013 Enterprise Survey data
-data1 <- read_dta("C:\\Users\\Aayush\\Documents\\Nepal_2009_2013.dta")
+data1 <- read_dta("C:\\Users\\Aayush\\Documents\\files prior to 1-7-2024\\Nepal_2009_2013.dta")
 
 ```
 
@@ -48,8 +48,8 @@ data3 <- data2 %>%
   mutate(yofop = ifelse(year == 2009, 2009 - b5, ifelse(year == 2013, 2013 - b5, NA))) %>%  
   
   #renaming columns
-  rename(sales = d2, capital = n7a, labor = n2a, interm = n2e, ID = id2009, Informal="e11", Experience="b7", Credit="k8",
-          Size="a6b", Foreigntech="e6", Bussiness_permit="j30c", Tax_burden="j30a", local="e1") %>% 
+  rename(sales = d2, capital = n7a, labor = n2a, interm = n2e, ID = id2009, Informal="e11", Experience="b7", 
+         Credit="k8",Size="a6b", Foreigntech="e6", Bussiness_permit="j30c", Tax_burden="j30a", local="e1") %>% 
   
   #take natural log of certain columns
   mutate(across(c(sales, capital,labor,interm), ~log(.))) %>% 
@@ -86,6 +86,38 @@ data4 <- data3%>%
   mutate(va=sales-interm) %>% 
   mutate(logtfp=va-((levinsohn_model$t0[1])*labor)-((levinsohn_model$t0[2])*capital)) %>% 
   mutate(avetfp=scale(logtfp)) 
+
+```
+
+
+```{r}
+# Panel regression
+# Create a panel data object
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+# Run fixed effects models
+fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within")
+fixed_model2 <- plm(avetfp ~ Informal + Experience , data = panel_data, model = "within")
+fixed_model3 <- plm(avetfp ~ Informal + Experience + Credit, data = panel_data, model = "within")
+fixed_model4 <- plm(avetfp ~ Informal + Experience + Credit + Size, data = panel_data, model = "within")
+fixed_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = panel_data, model = "within")
+fixed_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = panel_data, model = "within")
+fixed_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = panel_data, model = "within")
+fixed_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = panel_data, model = "within")
+
+
+# Store fixed effects models in a list
+fixed_models <- list(
+  fixed_model1, fixed_model2, fixed_model3, fixed_model4,
+  fixed_model5, fixed_model6, fixed_model7, fixed_model8
+)
+
+# Generate stargazer table for panel regression
+huxreg(fixed_models) %>%
+  set_caption("Panel Regression Models") %>%
+  set_number_format(2) %>%
+  set_width(0.95) %>%
+  set_height(0.95)
 
 ```
 
