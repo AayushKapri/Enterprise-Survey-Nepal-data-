@@ -65,7 +65,9 @@ data3 <- data2 %>%
                       TRUE ~ 0)),
     a6b = case_when(Size %in% c(1,2) ~ 1,
                     TRUE ~ 0))
-  
+
+
+
   
 ```
 
@@ -89,13 +91,85 @@ data4 <- data3%>%
 
 ```
 
+```{r}
+summary(data4)
 
+cor(data4[, c("avetfp", "Informal", "Experience", "Credit", "Size", "Foreigntech", "Tax_burden", "Bussiness_permit", "local")])
+
+```
+
+```{r}
+# Plotting to observe heterogeneity for time
+ggplot(data4, aes(x = year, y = avetfp)) +
+  stat_summary(fun = mean, geom = "point", color = "blue") +
+  geom_errorbar(stat = "summary", fun.data = "mean_se", color = "blue", width = 0.2) +
+  labs(title = "Heterogeneity across time", x = "ID", y = "avetfp")
+
+
+# Plotting to observe heterogeneity for firms
+ggplot(data4, aes(x = ID, y = avetfp)) +
+  stat_summary(fun = mean, geom = "point", color = "blue") +
+  geom_errorbar(stat = "summary", fun.data = "mean_se", color = "blue", width = 0.2) +
+  labs(title = "Heterogeneity across firms", x = "ID", y = "avetfp")
+
+
+
+```
 
 ```{r, warning=FALSE}
 
-# Panel regression
+# Make dataframe long for plot
+data4_long <- tidyr::pivot_longer(data4, cols = c("Informal", "Experience", "Credit", "Size", "Foreigntech", "Tax_burden", "Bussiness_permit", "local"))
+
+# Scatterplot with wrap
+ggplot(data4_long, aes(x = value, y = avetfp)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  facet_wrap(~name, scales = "free") +
+  labs(title = "Scatterplots of avetfp against Independent Variables", x = "Independent Variables", y = "avetfp")
+
+# Histogram with wrap
+ggplot(data4_long, aes(x = value)) +
+  geom_bar() +
+  facet_wrap(~name, scales = "free") +
+  labs(title = "Histograms of Independent Variables", x = "Values", y = "Count")
+
+```
+
+
+```{r}
+# OLS models
+ols_model1 <- lm(avetfp ~ Informal, data = data4)
+ols_model2 <- lm(avetfp ~ Informal + Experience , data = data4)
+ols_model3 <- lm(avetfp ~ Informal + Experience + Credit, data = data4)
+ols_model4 <- lm(avetfp ~ Informal + Experience + Credit + Size, data = data4)
+ols_model5 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = data4)
+ols_model6 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = data4)
+ols_model7 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = data4)
+ols_model8 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = data4)
+
+# Store OLS models in a list
+ols_models <- list(
+  ols_model1, ols_model2, ols_model3, ols_model4,
+  ols_model5, ols_model6, ols_model7, ols_model8
+)
+
+# Generate stargazer table for OLS regression
+huxreg(ols_models) %>%
+  set_caption("Ols Regression Models") %>%
+  set_number_format(2) %>%
+  set_width(0.95) %>%
+  set_height(0.95)
+
+
+```
+
+```{r, warning=FALSE}
+
 # Create a panel data object
 panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+# Panel regression
 
 # Run fixed effects models
 fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within")
