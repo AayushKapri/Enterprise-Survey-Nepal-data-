@@ -4,6 +4,9 @@ output:
   pdf_document: default
   html_document: default
 date: "2024-01-05"
+header-includes:
+  \usepackage{placeins}
+
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r, warning=FALSE}
 library(pacman)
-p_load(haven, tidyverse, prodest, estprod, plm, huxtable)
+p_load(haven, tidyverse, prodest, estprod, plm, huxtable, stargazer)
 ```
 
 
@@ -159,17 +162,31 @@ huxreg(ols_models) %>%
   set_caption("Ols Regression Models") %>%
   set_number_format(2) %>%
   set_width(0.95) %>%
-  set_height(0.95)
+  set_height(0.95) %>% 
+  set_position("center")
+
+library(clipr)
+
+# Generate stargazer table for panel regression
+stargazer(
+  ols_models,
+  title = "OLS Regresion models",
+  digits = 3,
+  align = TRUE,
+  type = "latex"
+) %>%
+  write_clip()
 
 
 ```
+
+\FloatBarrier
 
 ```{r, warning=FALSE}
 
 # Create a panel data object
 panel_data <- pdata.frame(data4, index = c("ID", "year"))
 
-# Panel regression
 
 # Run fixed effects models
 fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within")
@@ -196,6 +213,63 @@ huxreg(fixed_models) %>%
   set_width(0.95) %>%
   set_height(0.95)
 
+# library(clipr)
+# 
+# # Generate stargazer table for panel regression
+# stargazer(
+#   fixed_models,
+#   title = "Panel Regression Models",
+#   digits = 3,
+#   align = TRUE,
+#   type = "html"
+# ) %>%
+#   write_clip()
+
 ```
 
+```{r}
+fixef(fixed_model8) #Cross section wise intercept
+pFtest(fixed_model8,ols_model8)  #compare FE and Ols
+plmtest(fixed_model8,effect="twoways",type="bp")
+
+```
+```{r}
+# Create a panel data object
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+
+# Run random effects models
+random_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "random")
+random_model2 <- plm(avetfp ~ Informal + Experience , data = panel_data, model = "random")
+random_model3 <- plm(avetfp ~ Informal + Experience + Credit, data = panel_data, model = "random")
+random_model4 <- plm(avetfp ~ Informal + Experience + Credit + Size, data = panel_data, model = "random")
+random_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = panel_data, model = "random")
+random_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = panel_data, model = "random")
+random_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = panel_data, model = "random")
+random_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = panel_data, model = "random")
+
+# Store random effects models in a list
+random_models <- list(
+  random_model1, random_model2, random_model3, random_model4,
+  random_model5, random_model6, random_model7, random_model8
+)
+
+
+# Generate stargazer table for panel regression
+huxreg(random_models) %>%
+  set_caption("Panel Regression Models") %>%
+  set_number_format(2) %>%
+  set_width(0.95) %>%
+  set_height(0.95)
+
+
+```
+
+
+```{r}
+
+#hausman test
+
+phtest(fixed_model8, random_model8)
+```
 
