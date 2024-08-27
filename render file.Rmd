@@ -1,0 +1,760 @@
+---
+title: "\\fontsize{14pt}{3pt}\\selectfont \\textbf{\\textit{Thesis Data}}"
+author: "\\fontsize{12pt}{3pt}\\selectfont Aayush Kapri"
+date: "\\fontsize{12pt}{3pt}\\selectfont 01/11/2024"
+output:
+  pdf_document: default
+  html_document: default
+mainfont: Times New Roman
+fontsize: 12pt
+header-includes:
+    \usepackage{fvextra}
+    \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
+      breaksymbolleft={},
+      showspaces = false,
+      showtabs = false,
+      breaklines,
+      commandchars=\\\{\}
+    }
+  \usepackage{geometry}
+  \usepackage{subfig}
+  \usepackage{amsmath}
+  \usepackage{amssymb}
+  \usepackage{enumitem}
+  \usepackage{fancyhdr}
+  \usepackage{tikz}
+  \usepackage{placeins}
+  \usetikzlibrary{trees}
+  \usepackage{titlesec}
+  \pagestyle{fancy}
+  \usepackage{titling}
+    \pretitle{\begin{flushright}}
+    \posttitle{\end{flushright}}  
+    \preauthor{\begin{flushright}}
+    \postauthor{\end{flushright}}  
+    \predate{\begin{flushright}}
+    \postdate{\end{flushright}}
+    \setlength{\droptitle}{-1.1in}
+    
+    
+    # 
+    # header-includes:
+    # \usepackage{fvextra} 
+    # # Extends the functionalities of the verbatim environment for code listings, 
+    # # enabling options like line breaking, symbol replacements, etc.
+    # 
+    # \DefineVerbatimEnvironment{Highlighting}{Verbatim}{
+    #   breaksymbolleft={},
+    #   showspaces = false,
+    #   showtabs = false,
+    #   breaklines,
+    #   commandchars=\\\{\}
+    # }
+    # # Customizes the verbatim environment for code highlighting, adjusting line breaks, 
+    # # tab visibility, and other settings for better display of code blocks.
+    # 
+    # \usepackage{geometry} 
+    # # Allows customization of page layout, such as margins, paper size, and orientation.
+    # 
+    # \usepackage{subfig} 
+    # # Provides support for sub-figures within a single figure environment, allowing multiple 
+    # # figures to be organized under a single caption.
+    # 
+    # \usepackage{amsmath} 
+    # # Enhances mathematical typesetting, offering features for advanced math formulas and symbols.
+    # 
+    # \usepackage{amssymb} 
+    # # Provides additional mathematical symbols, including those used in the AMS (American Mathematical Society) documents.
+    # 
+    # \usepackage{enumitem} 
+    # # Extends control over list environments (itemize, enumerate), allowing custom labels, 
+    # # indents, and spacing.
+    # 
+    # \usepackage{fancyhdr} 
+    # # Allows customization of headers and footers in a document, offering more control over 
+    # # their style and content.
+    # 
+    # \usepackage{tikz} 
+    # # A powerful package for creating graphics programmatically, such as diagrams and illustrations.
+    # 
+    # \usepackage{placeins} 
+    # # Provides the \FloatBarrier command, which forces all figures and tables above it to be placed before proceeding.
+    # 
+    # \usetikzlibrary{trees} 
+    # # Adds additional TikZ libraries, in this case, the "trees" library, which is used to create tree diagrams.
+    # 
+    # \usepackage{titlesec} 
+    # # Offers control over section headings, allowing customization of font, spacing, and numbering.
+    # 
+    # \pagestyle{fancy} 
+    # # Activates the use of the fancyhdr package, enabling customized page styles with headers and footers.
+    # 
+    # \usepackage{titling} 
+    # # Allows customization of title formatting, such as the position and spacing of the title, author, and date.
+    # 
+    # \pretitle{\begin{flushright}}
+    # \posttitle{\end{flushright}}  
+    # \preauthor{\begin{flushright}}
+    # \postauthor{\end{flushright}}  
+    # \predate{\begin{flushright}}
+    # \postdate{\end{flushright}}
+    # # Adjusts the alignment of the title, author, and date to be right-aligned.
+    # 
+    # \setlength{\droptitle}{-1.1in}
+    # # Adjusts the vertical spacing between the title and the top of the page.
+
+---
+
+```{r setup, include=FALSE}
+#To run the code in this RMD file, change the file directory in normalizePath() to the directory with the data task CSV files, and install any packages used.
+knitr::opts_chunk$set(warning = F, message = F, echo = F, tidy = "styler") #Remove code, warnings, messages from pdf
+
+```
+
+# 1. Organizing and Cleaning Data
+
+## a. Load Libraries
+
+```{r,echo=TRUE, warning=FALSE}
+# Load the pacman package for efficient package management
+library(pacman)
+
+# Use pacman to load the required packages
+p_load(
+  haven,     # For reading and writing data
+  tidyverse, # A collection of packages for data manipulation, visualization,
+             # and more
+  prodest,   # For productivity and efficiency estimation
+  estprod,   # For estimating production functions
+  plm,       # For panel data econometrics
+  huxtable,  # For creating and formatting tables
+  stargazer, # For creating LaTeX, HTML, and ASCII tables
+  vtable,    # For creating variable tables
+  lmtest,    # For conducting statistical tests
+  hrbrthemes,# Additional themes for ggplot2
+  viridis,   # Color palettes for visualization
+  modelsummary,
+  vtable
+)
+```
+
+## b. Load data set
+
+The dataset is in .dta format, which I received from a professor. One of the reasons I kept the data in this format is because .dta files preserve metadata (variable labels, value labels, and formats). This was particularly useful since the original data has 400 variables, and I will only be using a subset in my analysis. Keeping the data in .dta format makes it easier to sort and filter the relevant variables. Additionally, I have the corresponding documentation for this dataset.  
+
+```{r,echo=TRUE}
+#load 2009-2013 Enterprise Survey data
+original_data <- read_dta("C:\\Users\\Aayush\\Documents\\files prior to 1-7-2024\\Nepal_2009_2013.dta")
+
+
+```
+
+## c. Clean
+
+The *original_data* has 968 observations. I filtered out firms according to the needs of my analysis. The data is filled with variables, but the variables do not really make sense, so I used the documentation and column labels to rename them. There are also columns with values less than 0, indicating that the firms either refused to answer or that the question does not apply to them. Some of the variables, such as *Informal*, are dummies, but they are coded as 1 and 2 instead of 1 and 0, so I had to recode them. The variable *yofo*p, which is the total number of years the firms have existed, is not present in the data, so I created it by calculating the difference between the survey year and the firm’s establishment year. I also took the log of sales, capital, labor, and intermediate inputs because the *Levinsohn and Petrin* method of calculating productivity requires these variables to be in log form. I adjusted any monetary values for inflation using the inflation rate for Nepal from 2009 to 2013 from official World Bank data. Lastly, I filtered out only manufacturing firms and retained those that have data for both years, thus creating a balanced panel dataset. *manufacturing_firms_panel_data* is left with 158 firms. I will also explain some key variables being used in the analysis.
+
+\begin{itemize}
+  \item \textit{sales}, In Last Fiscal Year, What Were This Establishment’S Total Annual Sales?
+  \item \textit{capital}, Cost For Establishment To Re-Purchase All Of Its Machinery
+  \item \textit{labor}, Total Labor Cost (Incl. Wages, Salaries, Bonuses, Etc) In Last Fiscal Year 
+  \item \textit{interm}, Cost Of Raw Materials And Intermediate Goods Used In Prod. In Last Fiscal Year
+  \item \textit{Informal}, Does This Establishment Compete Against Unregistered Or Informal Firms?
+  \item \textit{Experience}, How Many Years Of Experience Working In This Sector Does The Top Manager Have?
+  \item \textit{export}, percentage of sales as exports
+  \item \textit{Credit}, Establishment has A Line Of Credit Or Loan From A Financial Institution?
+  \item \textit{One\_Product}, First Product/Service Percent of Total Annual Sales
+  \item \textit{Foreign\_tech}, Do You Use Technology Licensed From A Foreign-Owned Company?
+  \item \textit{Tax\_burden}, How Much Of An Obstacle is Tax Rates?(scale 0-4)
+\end{itemize}
+
+```{r,echo=TRUE}
+manufacturing_firms_panel_data <- original_data %>%
+  
+  
+  # Select necessary columns for data analysis
+  select(
+    year,a0, id2009, d2, n7a, n2a, n2e, e11, b7, k8, a6b, j30c, j30a, l1, b5, l4a, 
+    b7, d3c, e6, b2b, c30a, e1, d3b, d3c, d1a3
+  ) %>%
+  
+  # Filter rows with values greater than or equal to 0
+  filter(if_all(
+    c(d2, n7a, n2a, n2e, e11, b7, k8, a6b, j30c, j30a, l1, b5, l4a, b7, d3c, e6, 
+      b2b, c30a, e1),
+    ~ . >= 0
+  )) %>%
+  
+  # Rename columns for easier reference
+  rename(
+    sales = d2, capital = n7a, labor = n2a, interm = n2e, ID = id2009, 
+    Informal = e11, Experience = b7, Credit = k8, Size = l1, Foreigntech = e6, 
+    Bussiness_permit = j30c, Tax_burden = j30a, local = e1, 
+    one_product = d1a3
+  ) %>%
+  
+  # Convert Informal variable to a dummy variable
+  mutate(Informal = ifelse(Informal == 2, 0, 1)) %>%
+  
+  # Add a column for the number of years of operation
+  mutate(yofop = ifelse(
+    year == 2009, 2009 - b5, 
+    ifelse(year == 2013, 2013 - b5, NA)
+  )) %>%
+  
+  # Determine if the firm sells only one product
+  mutate(one_product = ifelse(one_product < 100, 0, 1)) %>%
+  
+  # Calculate total export percentage as of sales
+  mutate(export = d3b + d3c) %>%
+  
+  # Take the natural log of certain columns
+  mutate(across(c(sales, capital, labor, interm), ~ log(.))) %>%
+  
+  # Adjust monetary values for inflation
+  mutate(across(
+    c(sales, capital, labor, interm),
+    ~ ifelse(year == 2013, (. / 142.52) * 100, .)
+  )) %>%
+  
+  # Convert other variables to dummy variables
+  mutate(local = ifelse(local == 1, 1, 0)) %>%
+  mutate(Credit = ifelse(Credit == 1, 1, 0)) %>%
+  mutate(Foreigntech = ifelse(Foreigntech == 1, 1, 0)) %>% 
+  
+  # Select only manufacturing firms
+  filter(a0 == 1) %>%
+  
+  # Select only rows valid for a balanced panel
+  group_by(ID) %>%
+  filter(all(c(2009, 2013) %in% year)) %>%
+  ungroup() 
+
+# Display the first few rows of the modified dataset
+head(manufacturing_firms_panel_data)
+
+
+  
+```
+
+
+# 2. Calculating Total Factor Productivity (TFP)
+
+In order to calculate Total Factor Productivity, I employ two methods: the Levinsohn-Petrin model and the Olley-Pakes model. The Levinsohn-Petrin method uses intermediate inputs (like materials) to control for unobserved productivity shocks, while the Olley-Pakes method uses investment as a proxy for these shocks in estimating production functions. The Levinsohn-Petrin method is advantageous when investment data is noisy or sparse, as it relies on intermediate inputs, which are often more consistently reported. On the other hand, the Olley-Pakes method is better suited when investment is a reliable and responsive proxy for productivity shocks, providing a clearer estimation of production functions. Since I have data for the cost of intermediate goods, I have decided to use the Levinsohn-Petrin method for my thesis.
+
+```{r,echo=TRUE}
+# Estimating productivity using the Levinsohn-Petrin model
+levinsohn_model <- levinsohn_petrin(
+  data = manufacturing_firms_panel_data, 
+  formula = sales ~ labor | capital | interm, 
+  id = "ID", 
+  time = "year", 
+  bootstrap = TRUE
+)
+
+# Estimating productivity using the Olley-Pakes model
+olleypakes_model <- olley_pakes(
+  data = manufacturing_firms_panel_data, 
+  formula = sales ~ labor | capital | interm, 
+  id = "ID", 
+  time = "year", 
+  bootstrap = TRUE
+)
+
+# Summarize the results of the Levinsohn-Petrin model
+summary(levinsohn_model)
+
+# Summarize the results of the olleypakes model
+summary(olleypakes_model)
+
+```
+
+```{r,echo=TRUE}
+# Filter and compute total factor productivity (TFP) using the Olley-Pakes model
+manufacturing_firms_panel_data2 <- manufacturing_firms_panel_data %>% 
+  # Calculate log TFP based on the Olley-Pakes model coefficients
+  mutate(logtfp = sales - 
+               (levinsohn_model$t0[1] * labor) - 
+               (levinsohn_model$t0[2] * capital) - 
+               interm) %>% 
+  
+  # Scale the log TFP values (standardization)
+  mutate(avetfp = scale(logtfp))
+
+
+```
+
+# 3. Calculate summary statistics
+
+There are many ways to represent summary tables, or tables in general, in R. However, my personal favorite is using the *datasummary* package. It integrates well with the tidyverse and supports output in various formats such as LaTeX, HTML, and huxtable. I also create a correlation table using the *datasummary_correlation* function in the *datasummary* package.
+
+```{r,echo=TRUE}
+# Remove the labels (if they are stored as attributes)
+attr(manufacturing_firms_panel_data2$Size, "label") <- NULL
+attr(manufacturing_firms_panel_data2$Experience, "label") <- NULL
+
+
+# Select specific columns from the dataset for the summary table
+selected_data <- manufacturing_firms_panel_data2 %>% 
+  select(Informal, Size, Experience, export, Credit, one_product, 
+         Foreigntech, Tax_burden)
+
+# Convert all columns in selected_data to numeric
+selected_data[] <- lapply(selected_data, function(x) as.numeric(as.character(x)))
+
+# Generate summary statistics for the selected columns
+datasummary_skim(selected_data,
+                 output = "huxtable",
+                 title= " Summary Statistics")
+
+
+  
+  
+# Calculate the correlation matrix for specified variables
+datasummary_correlation(selected_data,
+                        output = "huxtable",
+                        title= "Correlation matrix")
+
+
+```
+# 4. Data Visualization
+
+Let's check realtionship between my independent and dependent variables. I plot a scatter plot and a linear line between all the controls and the dependent variable in order to see the relationships and correlations between them, assess the strength and direction of these associations, and identify any potential outliers or trends that could influence the results of the analysis. I also plot histograms of all the variables to visualize their distributions, identify skewness or kurtosis, and detect any potential anomalies or outliers that may need to be addressed in the analysis. Lastly, I plot heterogeneity across time to examine how the relationships between variables may vary over different time periods, identify any temporal patterns or trends, and assess the stability or changes in the effects of the variables over time.
+
+
+```{r,echo=TRUE}
+# Reshape dataframe to long format for plotting
+data4_long <- tidyr::pivot_longer(
+  manufacturing_firms_panel_data2, 
+  cols = c("Informal", "Experience", "Credit", "Size", 
+           "Foreigntech", "Tax_burden", "Bussiness_permit", "local")
+)
+
+# Scatterplot of avetfp against each independent variable
+ggplot(data4_long, aes(x = value, y = avetfp)) +
+  
+  # Add scatter points
+  geom_point() +
+  
+  # Add linear fit line
+  geom_smooth(method = lm) +
+  
+  # Facet plot by variable
+  facet_wrap(~name, scales = "free") +
+  
+  # Add title and axis labels
+  labs(title = "Scatterplots of avetfp against Independent Variables", 
+       x = "Independent Variables", y = "Average TFP")
+
+# Histogram of values for each independent variable
+ggplot(data4_long, aes(x = value)) +
+  
+  # Add bar plot
+  geom_bar() +
+  
+  # Facet plot by variable
+  facet_wrap(~name, scales = "free") +
+  
+  # Add title and axis labels
+  labs(title = "Histograms of Independent Variables", x = "Values", y = "Count")
+
+
+
+
+# Plot to observe heterogeneity of TFP over time
+ggplot(manufacturing_firms_panel_data2, aes(x = year, y = avetfp)) +
+  
+  # Plot the mean TFP for each year
+  stat_summary(fun = mean, geom = "point", color = "blue") +
+  
+  # Add error bars representing standard error around the mean
+  geom_errorbar(stat = "summary", fun.data = "mean_se", 
+                color = "blue", width = 0.2) +
+  
+  # Add title and axis labels
+  labs(title = "Heterogeneity across time", x = "Year", y = "Average TFP")
+
+```
+# 5. Regression Models
+
+I am going to run a few different regression models for my panel data because this approach allows me to compare results across different specifications, account for various potential biases, and ensure the robustness of my findings by evaluating how different models handle the data.
+
+
+## a. OLS Model
+
+
+\begin{equation}
+\ln tfp_{it} = \beta_0 + \beta_1 Informal_{it} + \gamma X_{it} + \varepsilon_{it}
+\label{eq:regression_model}
+\end{equation}
+
+Where:
+\begin{align*}
+&\ln tfp_{it} \text{ is the dependent variable for firm } i \text{ at year } t, \\
+&Informal_{it} \text{ is the main independent variable for firm } i \text{ at year } t, \\
+&X_{it} \text{ is the set of controls that include exper, credit, size, tech, tax, permit, and local}, \\
+&\varepsilon_{it} \text{ is the error term.}
+\end{align*}
+
+
+
+
+
+```{r,echo=TRUE}
+
+data4 <- manufacturing_firms_panel_data2
+
+
+# Fit OLS regression models with increasing complexity
+ols_model1 <- lm(avetfp ~ Informal, data = data4)
+
+ols_model2 <- lm(avetfp ~ Informal + log(Size), data = data4)
+
+ols_model3 <- lm(avetfp ~ Informal + log(Size) + Experience, data = data4)
+
+ols_model4 <- lm(avetfp ~ Informal + log(Size) + Experience + export, data = data4)
+
+ols_model5 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit, data = data4)
+
+ols_model6 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product, 
+                 data = data4)
+
+ols_model7 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product + 
+                   Foreigntech, data = data4)
+
+ols_model8 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product +
+                   Foreigntech + Tax_burden, data = data4)
+
+# Store OLS models in a list
+ols_models <- list(ols_model1, ols_model2, ols_model3, ols_model4, ols_model5, ols_model6, ols_model7, ols_model8)
+
+
+
+modelsummary(ols_models,
+             output = "huxtable",
+             fmt = fmt_significant(2),
+             stars = TRUE,
+             gof_map = c("r.squared", "adj.r.squared", "nobs", "F"),
+             title = "OLS model"
+             )
+```
+
+\FloatBarrier
+
+
+## b. Fixed effect without time and entity effect
+
+
+\begin{equation}
+\ln tfp_{it} = \beta_0 + \beta_1 Informal_{it} + \gamma X_{it} + \alpha_i + \varepsilon_{it}
+\label{eq:fixed_effect_model}
+\end{equation}
+
+Where:
+\begin{align*}
+&\ln tfp_{it} \text{ is the dependent variable for firm } i \text{ at year } t, \\
+&Informal_{it} \text{ is the main independent variable for firm } i \text{ at year } t, \\
+&X_{it} \text{ is the set of controls that include exper, credit, size, tech, tax, permit, and local}, \\
+&\alpha_i \text{ is the fixed effect for firm } i, \\
+&\varepsilon_{it} \text{ is the error term.}
+\end{align*}
+
+
+```{r fixed_model_without_any_effect, warning=FALSE, include = TRUE,echo=TRUE}
+
+# Convert data to a panel data object with ID and year as indices
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+# Fit fixed effects models with increasing complexity
+fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within")
+
+fixed_model2 <- plm(avetfp ~ Informal + local, data = panel_data, model = "within")
+
+fixed_model3 <- plm(avetfp ~ Informal + local + Experience, data = panel_data
+                    , model = "within")
+
+fixed_model4 <- plm(avetfp ~ Informal + local + Experience + Credit, data = panel_data
+                    , model = "within")
+
+fixed_model5 <- plm(avetfp ~ Informal + local + Experience + Credit + log(Size)
+                    , data = panel_data, model = "within")
+
+fixed_model6 <- plm(avetfp ~ Informal + local + Experience + Credit + log(Size) + 
+                      Foreigntech + export, data = panel_data, model = "within")
+
+fixed_model7 <- plm(avetfp ~ Informal + local + Experience + Credit + log(Size) + 
+                      Foreigntech + export , data = panel_data, model = "within")
+
+fixed_model8 <- plm(avetfp ~ Informal + local + Experience + Credit + log(Size) + 
+                      Foreigntech + export + Tax_burden, data = panel_data
+                    , model = "within", effect = "twoways")
+
+# Store fixed effects models in a list
+fixed_models <- list(fixed_model1, fixed_model2, fixed_model3, fixed_model4, fixed_model5, fixed_model6, fixed_model7, fixed_model8)
+
+# Create a summary table for fixed effects models
+modelsummary(fixed_models,
+             output = "huxtable",
+             fmt = fmt_significant(2),
+             stars = TRUE,
+             gof_map = c("r.squared", "adj.r.squared", "nobs", "F"),
+             title="Fixed effect without time and entity effect"
+             )
+
+
+```
+\FloatBarrier
+
+## c. Fixed effect without time effect
+
+
+\begin{equation}
+\ln tfp_{it} = \beta_0 + \beta_1 Informal_{it} + \gamma X_{it} + \alpha_i + \delta_t + \varepsilon_{it}
+\label{eq:fixed_effect_time_model}
+\end{equation}
+
+Where:
+\begin{align*}
+&\ln tfp_{it} \text{ is the dependent variable for firm } i \text{ at year } t, \\
+&Informal_{it} \text{ is the main independent variable for firm } i \text{ at year } t, \\
+&X_{it} \text{ is the set of controls that include exper, credit, size, tech, tax, permit, and local}, \\
+&\alpha_i \text{ is the fixed effect for firm } i, \\
+&\delta_t \text{ is the time effect for year } t, \\
+&\varepsilon_{it} \text{ is the error term.}
+\end{align*}
+
+
+
+```{r fixed_model_with_time_effect, warning=FALSE, include = TRUE,echo=TRUE}
+
+# Convert data to a panel data object with ID and year as indices
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+# Fit fixed effects models with a time effect and increasing complexity
+fixed_model1 <- plm(avetfp ~ Informal, data = panel_data
+                    , model = "within", effect = "time")
+
+fixed_model2 <- plm(avetfp ~ Informal + Experience, data = panel_data
+                    , model = "within", effect = "time")
+
+fixed_model3 <- plm(avetfp ~ Informal + Experience + Credit
+                    , data = panel_data, model = "within", effect = "time")
+
+fixed_model4 <- plm(avetfp ~ Informal + Experience + Credit + Size
+                    , data = panel_data, model = "within", effect = "time")
+
+fixed_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech
+                    , data = panel_data, model = "within", effect = "time")
+
+fixed_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech
+                  + Tax_burden, data = panel_data, model = "within", effect = "time")
+
+fixed_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech +
+                      Tax_burden + Bussiness_permit, data = panel_data,
+                    model = "within", effect = "time")
+
+fixed_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech +
+                      Tax_burden + Bussiness_permit + local, data = panel_data
+                    , model = "within", effect = "time")
+
+# Store all fixed effects models in a list
+fixed_models <- list(
+  fixed_model1, fixed_model2, fixed_model3, fixed_model4,
+  fixed_model5, fixed_model6, fixed_model7, fixed_model8
+)
+
+# Create and format a summary table for fixed effects models with time effect
+modelsummary(fixed_models,
+             output = "huxtable",
+             fmt = fmt_significant(2),
+             stars = TRUE,
+             gof_map = c("r.squared", "adj.r.squared", "nobs", "F"),
+             title="Fixed effect with time effect"
+             )%>%              
+            set_width(1) 
+
+
+
+```
+\FloatBarrier
+
+## d. Fixed effect with time and entity effect
+
+\begin{equation}
+\ln tfp_{it} = \beta_0 + \beta_1 Informal_{it} + \gamma X_{it} + \alpha_i + \delta_t + \varepsilon_{it}
+\label{eq:fixed_effects_model}
+\end{equation}
+
+Where:
+\begin{align*}
+&\ln tfp_{it} \text{ is the dependent variable for firm } i \text{ at year } t, \\
+&Informal_{it} \text{ is the main independent variable for firm } i \text{ at year } t, \\
+&X_{it} \text{ is the set of controls that include exper, credit, size, tech, tax, permit, and local}, \\
+&\alpha_i \text{ is the fixed effect for firm } i, \\
+&\delta_t \text{ is the time effect for year } t, \\
+&\varepsilon_{it} \text{ is the error term.}
+\end{align*}
+
+
+
+
+
+
+```{r fixed_model_with_time_and_industry, warning=FALSE, include = TRUE,echo=TRUE}
+
+# Convert data to a panel data object with ID and year as indices
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+# Fit fixed effects models with both time and industry effects
+fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within")
+
+fixed_model2 <- plm(avetfp ~ Informal +  Experience, data = panel_data
+                    , model = "within", effect = "twoways")
+
+fixed_model3 <- plm(avetfp ~ Informal + Experience + Credit, data = panel_data
+                    , model = "within", effect = "twoways")
+
+fixed_model4 <- plm(avetfp ~ Informal +  Experience + Credit + Size, data = panel_data
+                    , model = "within", effect = "twoways")
+
+fixed_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech
+                    , data = panel_data, model = "within", effect = "twoways")
+
+fixed_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + 
+                      Tax_burden, data = panel_data, model = "within"
+                    , effect = "twoways")
+
+fixed_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech
+                    + Tax_burden + Bussiness_permit, data = panel_data
+                    , model = "within", effect = "twoways")
+
+fixed_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + 
+                    Tax_burden + Bussiness_permit + local,
+                    data = panel_data, model = "within", effect = "twoways")
+
+# Store all fixed effects models in a list
+fixed_models <- list(
+  fixed_model1, fixed_model2, fixed_model3, fixed_model4,
+  fixed_model5, fixed_model6, fixed_model7, fixed_model8
+)
+
+# Create and format a summary table for fixed effects models with time 
+# and industry effects
+modelsummary(fixed_models,
+             output = "huxtable",
+             fmt = fmt_significant(2),
+             stars = TRUE,
+             gof_map = c("r.squared", "adj.r.squared", "nobs", "F"),
+             title="Fixed effect with time and entity effect"
+             )
+
+
+```
+
+
+\FloatBarrier
+
+
+## e. Random Effect
+
+
+
+
+\begin{equation}
+lntfp_{it} = \beta_0 + \beta_1 Informal_{it} + \gamma X_{it} + \alpha_i  + \varepsilon_{it}
+\label{eq:regression mode}
+\end{equation}
+
+Where:
+\begin{align*}
+&lntfp_{it} \text{ is the dependent variable for firm } i \text{ at year } t, \\
+&Informal_{it} \text{ is the main independent variable for firm } i \text{ at year } t, \\
+&X_{it} \text { is the set of controls that include exper, credit, size, tech, tax, permit and local} \\
+&\alpha_i \text{ is the random effect for firm } i, \\
+&\varepsilon_{it} \text{ is the error term.}
+\end{align*}
+
+
+
+
+```{r Random-effect Panel Regression Models without any effect, include = TRUE,echo=TRUE}
+# Create a panel data object with "ID" and "year" as panel identifiers
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+# Run random effects models with increasing complexity
+random_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "random")
+
+random_model2 <- plm(avetfp ~ Informal + log(Size), data = panel_data, model = "random")
+
+random_model3 <- plm(avetfp ~ Informal + log(Size) + Experience
+                     , data = panel_data, model = "random")
+
+random_model4 <- plm(avetfp ~ Informal + log(Size) + Experience + export,
+                     data = panel_data, model = "random")
+
+random_model5 <- plm(avetfp ~ Informal +  log(Size) + Experience + export + Credit,
+                     data = panel_data, model = "random")
+
+random_model6 <- plm(avetfp ~ Informal + log(Size) + Experience + export + Credit +
+                       one_product, data = panel_data, model = "random")
+
+random_model7 <- plm(avetfp ~ Informal + log(Size) + Experience + export + Credit + 
+                      one_product + Foreigntech, data = panel_data, model = "random")
+
+random_model8 <- plm(avetfp ~ Informal + log(Size) + Experience + export + Credit + 
+                       one_product + Foreigntech + Tax_burden, data = panel_data
+                     , model = "random")
+
+# Store random effects models in a list
+random_models <- list(
+  random_model1, random_model2, random_model3, random_model4,
+  random_model5, random_model6, random_model7, random_model8
+)
+
+# Generate and format a table for the random effects models
+modelsummary(random_models,
+             output = "huxtable",
+             fmt = fmt_significant(2),
+             stars = TRUE,
+             gof_map = c("r.squared", "adj.r.squared", "nobs", "F"),
+             title="Random effect model"
+             )
+
+
+```
+
+\FloatBarrier
+
+
+# 6. Robutness check
+
+
+
+```{r,echo=TRUE}
+# Extract and display the fixed effects (cross-section-wise intercepts) 
+fixef(fixed_model8) 
+
+# Perform a Hausman test to compare Fixed Effects model with OLS model
+pFtest(fixed_model8, ols_model8)  
+
+# Perform a Breusch-Pagan test to check for two-way fixed effects
+plmtest(fixed_model8, effect = "twoways", type = "bp")
+
+
+```
+
+
+```{r,echo=TRUE}
+
+# Perform Hausman test to compare fixed and random effects models
+phtest(fixed_model8, random_model8)
+
+# Apply heteroscedasticity-robust standard errors to the random effects model
+robust_model <- coeftest(random_model8, vcov = vcovHC(random_model8, type = "HC0"))
+
+# Display the results with robust standacomprd errors
+robust_model
+
+```
+
+
+

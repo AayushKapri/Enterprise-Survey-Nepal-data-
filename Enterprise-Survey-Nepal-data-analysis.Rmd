@@ -1,12 +1,11 @@
 ---
 title: "Thesis code knit"
 output:
+  word_document: default
   pdf_document: default
   html_document: default
 date: "2024-01-05"
-header-includes:
-  \usepackage{placeins}
-
+header-includes: \usepackage{placeins} \usepackage{eurosym}
 ---
 
 ```{r setup, include=FALSE}
@@ -14,10 +13,24 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-
 ```{r, warning=FALSE}
+# Load pacman
 library(pacman)
-p_load(haven, tidyverse, prodest, estprod, plm, huxtable, stargazer)
+
+# Use pacman to load the required packages
+p_load(
+  haven,     # For reading and writing data
+  tidyverse, # A collection of packages for data manipulation, visualization, and more
+  prodest,   # For productivity and efficiency estimation
+  estprod,   # For estimating production functions
+  plm,       # For panel data econometrics
+  huxtable,  # For creating and formatting tables
+  stargazer, # For creating LaTeX, HTML, and ASCII tables
+  vtable,    # For creating variable tables
+  lmtest, # For doing statistical tests
+  hrbrthemes,
+  viridis
+)
 ```
 
 
@@ -42,17 +55,26 @@ data3 <- data2 %>%
   
   #select necessary columns for data analysis
   select(year, id2009, d2, n7a, n2a, n2e,e11,b7,k8, a6b,j30c,j30a,l1,b5,l4a,b7,d3c,e6,b2b,c30a,
-         e1) %>% 
+         e1,d3b,d3c,d1a3) %>% 
   
   #filter rows with values greater than or equal to 0
   filter(if_all(c(d2,n7a,n2a,n2e,e11,b7,k8,a6b,j30c,j30a,l1,b5,l4a,b7,d3c,e6,b2b,c30a,e1), ~.>= 0)) %>% 
   
+    #renaming columns
+  rename(sales = d2, capital = n7a, labor = n2a, interm = n2e, ID = id2009, Informal="e11", Experience="b7", 
+         Credit="k8",Size="l1", Foreigntech="e6", Bussiness_permit="j30c", Tax_burden="j30a", local="e1", one_product ="d1a3") %>% 
+  
+  #changing informal to dummy
+  mutate(Informal = ifelse(Informal == 2, 0, 1)) %>%
+  
   #adding no. of years of operation column to the data
   mutate(yofop = ifelse(year == 2009, 2009 - b5, ifelse(year == 2013, 2013 - b5, NA))) %>%  
   
-  #renaming columns
-  rename(sales = d2, capital = n7a, labor = n2a, interm = n2e, ID = id2009, Informal="e11", Experience="b7", 
-         Credit="k8",Size="a6b", Foreigntech="e6", Bussiness_permit="j30c", Tax_burden="j30a", local="e1") %>% 
+  #does the firm sell only one product?
+  mutate(one_product = ifelse(one_product < 100, 0, 1)) %>% 
+  
+  #total export percentage as of sales
+  mutate(export=d3b+d3c) %>% 
   
   #take natural log of certain columns
   mutate(across(c(sales, capital,labor,interm), ~log(.))) %>% 
@@ -62,16 +84,20 @@ data3 <- data2 %>%
     across(c(sales, capital, labor, interm),
            ~ifelse(year == 2013, (./142.52)*100, .))) %>% 
   
-  #Create dummy variables out of ordinal variables
-  mutate(across(c(Informal, Credit, local, Foreigntech),
-           ~case_when(. == 1 ~ 1,
-                      TRUE ~ 0)),
-    a6b = case_when(Size %in% c(1,2) ~ 1,
-                    TRUE ~ 0))
-
-
+  mutate(local = ifelse(local == 1, 1, 0)) %>% 
+  mutate(Credit = ifelse(Credit== 1, 1, 0)) %>% 
+   mutate(Credit = ifelse(Credit== 1, 1, 0)) %>% 
+   mutate(Foreigntech = ifelse(Foreigntech== 1, 1, 0)) 
+  
+  
+  
 
   
+```
+
+```{r}
+ols_modelsale<- lm(sales ~ labor + capital + interm, data = data3)
+summary(ols_modelsale)
 ```
 
 
@@ -83,37 +109,45 @@ levinsohn_model <- levinsohn_petrin(data = data3, sales ~ labor | capital | inte
 olleypakes_model <- olley_pakes(data = data3, sales ~ labor | capital | interm,
                  id = "ID", time = "year", bootstrap = TRUE)
 
+summary(levinsohn_model)
 ```
 
 ```{r}
 #filter again with coefficients
 data4 <- data3%>% 
-  mutate(va=sales-interm) %>% 
-  mutate(logtfp=va-((levinsohn_model$t0[1])*labor)-((levinsohn_model$t0[2])*capital)) %>% 
-  mutate(avetfp=scale(logtfp)) 
+  # mutate(va=sales-interm) %>% 
+  mutate(logtfp=sales-((olleypakes_model$t0[1])*labor)-((olleypakes_model$t0[2])*capital)-interm) %>% 
+  # mutate(avetfp=exp(logtfp)) %>% 
+  mutate(avetfp=scale(logtfp))
 
 ```
 
 ```{r}
-summary(data4)
+
+# Select only particular columns for summary table
+selected_data <- data4 %>% 
+  select(Informal, Size, Experience, export, Credit, one_product, Foreigntech, Tax_burden)
+
+
+
+summary(selected_data)
+
 
 cor(data4[, c("avetfp", "Informal", "Experience", "Credit", "Size", "Foreigntech", "Tax_burden", "Bussiness_permit", "local")])
+
+
 
 ```
 
 ```{r}
 # Plotting to observe heterogeneity for time
-ggplot(data4, aes(x = year, y = avetfp)) +
+plot <- ggplot(data4, aes(x = year, y = avetfp)) +
   stat_summary(fun = mean, geom = "point", color = "blue") +
   geom_errorbar(stat = "summary", fun.data = "mean_se", color = "blue", width = 0.2) +
   labs(title = "Heterogeneity across time", x = "ID", y = "avetfp")
 
-
-# Plotting to observe heterogeneity for firms
-ggplot(data4, aes(x = ID, y = avetfp)) +
-  stat_summary(fun = mean, geom = "point", color = "blue") +
-  geom_errorbar(stat = "summary", fun.data = "mean_se", color = "blue", width = 0.2) +
-  labs(title = "Heterogeneity across firms", x = "ID", y = "avetfp")
+# Save the plot to the current working directory
+ggsave("heterogeneity_across_time.png", plot = plot, width = 7, height = 5, dpi = 300)
 
 
 
@@ -125,37 +159,50 @@ ggplot(data4, aes(x = ID, y = avetfp)) +
 data4_long <- tidyr::pivot_longer(data4, cols = c("Informal", "Experience", "Credit", "Size", "Foreigntech", "Tax_burden", "Bussiness_permit", "local"))
 
 # Scatterplot with wrap
-ggplot(data4_long, aes(x = value, y = avetfp)) +
+scatter_plot <- ggplot(data4_long, aes(x = value, y = avetfp)) +
   geom_point() +
   geom_smooth(method = lm) +
   facet_wrap(~name, scales = "free") +
   labs(title = "Scatterplots of avetfp against Independent Variables", x = "Independent Variables", y = "avetfp")
 
+# Save scatterplot
+ggsave("scatterplots_avetfp_independent_variables.png", plot = scatter_plot, width = 10, height = 8, dpi = 300)
+
 # Histogram with wrap
-ggplot(data4_long, aes(x = value)) +
+histogram_plot <- ggplot(data4_long, aes(x = value)) +
   geom_bar() +
   facet_wrap(~name, scales = "free") +
   labs(title = "Histograms of Independent Variables", x = "Values", y = "Count")
 
+# Save histogram
+ggsave("histograms_independent_variables.png", plot = histogram_plot, width = 10, height = 8, dpi = 300)
+
+
+
 ```
 
 
-```{r}
+
+
+
+```{r, include = FALSE}
 # OLS models
 ols_model1 <- lm(avetfp ~ Informal, data = data4)
-ols_model2 <- lm(avetfp ~ Informal + Experience , data = data4)
-ols_model3 <- lm(avetfp ~ Informal + Experience + Credit, data = data4)
-ols_model4 <- lm(avetfp ~ Informal + Experience + Credit + Size, data = data4)
-ols_model5 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = data4)
-ols_model6 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = data4)
-ols_model7 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = data4)
-ols_model8 <- lm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = data4)
+ols_model2 <- lm(avetfp ~ Informal + log(Size), data = data4)
+ols_model3 <- lm(avetfp ~ Informal + log(Size) + Experience, data = data4)
+ols_model4 <- lm(avetfp ~ Informal + log(Size) + Experience + export, data = data4)
+ols_model5 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit, data = data4)
+ols_model6 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product, data = data4)
+ols_model7 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product + Foreigntech, data = data4)
+ols_model8 <- lm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product + Foreigntech + Tax_burden, data = data4)
+
 
 # Store OLS models in a list
 ols_models <- list(
   ols_model1, ols_model2, ols_model3, ols_model4,
   ols_model5, ols_model6, ols_model7, ols_model8
 )
+
 
 # Generate stargazer table for OLS regression
 huxreg(ols_models) %>%
@@ -165,6 +212,8 @@ huxreg(ols_models) %>%
   set_height(0.95) %>% 
   set_position("center")
 
+
+
 library(clipr)
 
 # Generate stargazer table for panel regression
@@ -173,16 +222,16 @@ stargazer(
   title = "OLS Regresion models",
   digits = 3,
   align = TRUE,
-  type = "latex"
+  type = "html"
 ) %>%
-  write_clip()
+  write_clip(allow_non_interactive = TRUE)
 
 
 ```
 
 \FloatBarrier
 
-```{r, warning=FALSE}
+```{r fixed_model_without_any_effect, warning=FALSE, include = TRUE}
 
 # Create a panel data object
 panel_data <- pdata.frame(data4, index = c("ID", "year"))
@@ -190,13 +239,13 @@ panel_data <- pdata.frame(data4, index = c("ID", "year"))
 
 # Run fixed effects models
 fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within")
-fixed_model2 <- plm(avetfp ~ Informal + Experience , data = panel_data, model = "within")
-fixed_model3 <- plm(avetfp ~ Informal + Experience + Credit, data = panel_data, model = "within")
-fixed_model4 <- plm(avetfp ~ Informal + Experience + Credit + Size, data = panel_data, model = "within")
-fixed_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = panel_data, model = "within")
-fixed_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = panel_data, model = "within")
-fixed_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = panel_data, model = "within")
-fixed_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = panel_data, model = "within")
+fixed_model2 <- plm(avetfp ~ Informal + local  , data = panel_data, model = "within")
+fixed_model3 <- plm(avetfp ~ Informal + local+ Experience , data = panel_data, model = "within")
+fixed_model4 <- plm(avetfp ~ Informal +  local+ Experience + Credit, data = panel_data, model = "within")
+fixed_model5 <- plm(avetfp ~ Informal + local+Experience + Credit + log(Size), data = panel_data, model = "within")
+fixed_model6 <- plm(avetfp ~ Informal + local+Experience + Credit + log(Size)+ Foreigntech+export, data = panel_data, model = "within")
+fixed_model7 <- plm(avetfp ~ Informal + local+Experience + Credit + log(Size)+ Foreigntech+ export, data = panel_data, model = "within")
+fixed_model8 <- plm(avetfp ~ Informal + local + Experience + Credit + log(Size) + Foreigntech + export + Tax_burden, data = panel_data, model = "within", effect="twoways")
 
 
 # Store fixed effects models in a list
@@ -213,40 +262,161 @@ huxreg(fixed_models) %>%
   set_width(0.95) %>%
   set_height(0.95)
 
-# library(clipr)
-# 
-# # Generate stargazer table for panel regression
-# stargazer(
-#   fixed_models,
-#   title = "Panel Regression Models",
-#   digits = 3,
-#   align = TRUE,
-#   type = "html"
-# ) %>%
-#   write_clip()
+library(clipr)
+
+# Generate stargazer table for panel regression
+stargazer(
+  fixed_models,
+  title = "Fixed-effect Panel Regression Models Without any effect",
+  digits = 3,
+  align = TRUE,
+  type = "latex"
+) %>%
+  write_clip(allow_non_interactive = TRUE)
 
 ```
 
-```{r}
+
+```{r fixed_model_with_time_effect, warning=FALSE, include = TRUE}
+
+# Create a panel data object
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+
+# Run fixed effects models
+fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within", effect = "time")
+fixed_model2 <- plm(avetfp ~ Informal + Experience , data = panel_data, model = "within", effect = "time")
+fixed_model3 <- plm(avetfp ~ Informal + Experience + Credit, data = panel_data, model = "within", effect = "time")
+fixed_model4 <- plm(avetfp ~ Informal + Experience + Credit + Size, data = panel_data, model = "within", effect = "time")
+fixed_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = panel_data, model = "within", effect = "time")
+fixed_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = panel_data, model = "within", effect = "time")
+fixed_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = panel_data, model = "within", effect = "time")
+fixed_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = panel_data, model = "within", effect = "time")
+
+
+# Store fixed effects models in a list
+fixed_models <- list(
+  fixed_model1, fixed_model2, fixed_model3, fixed_model4,
+  fixed_model5, fixed_model6, fixed_model7, fixed_model8
+)
+
+
+# Generate stargazer table for panel regression
+huxreg(fixed_models) %>%
+  set_caption("Fixed-effect Panel Regression Models With time effect") %>%
+  set_number_format(2) %>%
+  set_width(0.95) %>%
+  set_height(0.95)
+
+library(clipr)
+
+# Generate stargazer table for panel regression
+stargazer(
+  fixed_models,
+  title = "Fixed-effect Panel Regression Models With time effect",
+  digits = 3,
+  align = TRUE,
+  type = "html"
+) %>%
+  write_clip(allow_non_interactive = TRUE)
+
+```
+
+
+
+
+
+
+
+```{r fixed_model_with_time_and_industry, warning=FALSE, include = FALSE}
+
+# Create a panel data object
+panel_data <- pdata.frame(data4, index = c("ID", "year"))
+
+
+# Run fixed effects models
+fixed_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "within")
+fixed_model2 <- plm(avetfp ~ Informal + Experience , data = panel_data, model = "within", effect = "twoways")
+fixed_model3 <- plm(avetfp ~ Informal + Experience + Credit, data = panel_data, model = "within", effect = "twoways")
+fixed_model4 <- plm(avetfp ~ Informal + Experience + Credit + Size, data = panel_data, model = "within", effect = "twoways")
+fixed_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = panel_data, model = "within", effect = "twoways")
+fixed_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = panel_data, model = "within", effect = "twoways")
+fixed_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = panel_data, model = "within", effect = "twoways")
+fixed_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = panel_data, model = "within", effect = "twoways")
+
+
+# Store fixed effects models in a list
+fixed_models <- list(
+  fixed_model1, fixed_model2, fixed_model3, fixed_model4,
+  fixed_model5, fixed_model6, fixed_model7, fixed_model8
+)
+
+
+# Generate stargazer table for panel regression
+huxreg(fixed_models) %>%
+  set_caption("Fixed-effect Panel Regression Models With time and industry effect") %>%
+  set_number_format(2) %>%
+  set_width(0.95) %>%
+  set_height(0.95)
+
+library(clipr)
+
+# Generate stargazer table for panel regression
+stargazer(
+  fixed_models,
+  title = "Fixed-effect Panel Regression Models With time and industry effect",
+  digits = 3,
+  align = TRUE,
+  type = "latex"
+) %>%
+  write_clip(allow_non_interactive = TRUE)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r, include = FALSE}
 fixef(fixed_model8) #Cross section wise intercept
 pFtest(fixed_model8,ols_model8)  #compare FE and Ols
 plmtest(fixed_model8,effect="twoways",type="bp")
 
 ```
-```{r}
+
+
+
+
+
+```{r Random-effect Panel Regression Models without any effect, include = FALSE}
 # Create a panel data object
 panel_data <- pdata.frame(data4, index = c("ID", "year"))
 
 
-# Run random effects models
+
+
 random_model1 <- plm(avetfp ~ Informal, data = panel_data, model = "random")
-random_model2 <- plm(avetfp ~ Informal + Experience , data = panel_data, model = "random")
-random_model3 <- plm(avetfp ~ Informal + Experience + Credit, data = panel_data, model = "random")
-random_model4 <- plm(avetfp ~ Informal + Experience + Credit + Size, data = panel_data, model = "random")
-random_model5 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech, data = panel_data, model = "random")
-random_model6 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden, data = panel_data, model = "random")
-random_model7 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit, data = panel_data, model = "random")
-random_model8 <- plm(avetfp ~ Informal + Experience + Credit + Size + Foreigntech + Tax_burden + Bussiness_permit + local, data = panel_data, model = "random")
+
+random_model2 <- plm(avetfp ~ Informal + log(Size), data = panel_data, model = "random")
+
+random_model3 <- plm(avetfp ~ Informal + log(Size) + Experience, data = panel_data, model = "random")
+
+random_model4 <- plm(avetfp ~ Informal + log(Size) + Experience + export, data=panel_data, model = "random")
+
+random_model5 <- plm(avetfp ~ Informal + log(Size) + Experience + export + Credit, data = panel_data, model = "random")
+
+random_model6 <- plm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product, data = panel_data, model = "random")
+
+random_model7 <- plm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product + Foreigntech, data = panel_data, model = "random")
+
+random_model8 <- plm(avetfp ~ Informal + log(Size) + Experience + export + Credit + one_product + Foreigntech + Tax_burden, data = panel_data, model = "random")
+
 
 # Store random effects models in a list
 random_models <- list(
@@ -262,8 +432,22 @@ huxreg(random_models) %>%
   set_width(0.95) %>%
   set_height(0.95)
 
+library(clipr)
+
+# Generate stargazer table for panel regression
+stargazer(
+  random_models,
+  title = "Random-effect Panel Regression Models without any effect",
+  digits = 3,
+  align = TRUE,
+  type = "latex"
+) %>%
+  write_clip(allow_non_interactive = TRUE)
+
 
 ```
+
+
 
 
 ```{r}
@@ -271,5 +455,10 @@ huxreg(random_models) %>%
 #hausman test
 
 phtest(fixed_model8, random_model8)
+
+# Apply heteroscedasticity-robust standard errors
+robust_model <- coeftest(random_model8, vcov = vcovHC(random_model8, type = "HC0"))
+
+robust_model
 ```
 
